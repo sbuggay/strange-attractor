@@ -2,7 +2,7 @@ import * as three from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import Stats from 'three/examples/jsm/libs/stats.module'
 import { Pane } from 'tweakpane';
-import { MeshLine, MeshLineMaterial, MeshLineRaycast } from 'three.meshline';
+import { MeshLine, MeshLineMaterial } from 'three.meshline';
 
 const scene = new three.Scene()
 
@@ -19,7 +19,6 @@ renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
 const controls = new OrbitControls(camera, renderer.domElement)
-//controls.addEventListener('change', render)
 
 window.addEventListener('resize', onWindowResize, false)
 function onWindowResize() {
@@ -37,9 +36,18 @@ function createGui(parameters): Pane {
     const simulation = pane.addFolder({
         title: 'simulation'
     })
+    const playButton = simulation.addButton({
+        title: 'pause'
+    });
+
+    playButton.on('click', () => {
+        parameters.playing = !parameters.playing;
+        playButton.title = parameters.playing ? 'pause' : 'play';
+    });
+
     simulation.addInput(parameters, 'iterations', {
         min: 0,
-        max: 10000,
+        max: 5000,
         step: 1
     });
     simulation.addInput(parameters, 'a', {
@@ -53,6 +61,15 @@ function createGui(parameters): Pane {
     simulation.addInput(parameters, 'c', {
         min: 0,
         max: 50
+    });
+    simulation.addInput(parameters, 'dt', {
+        min: 0,
+        max: 1
+    });
+    simulation.addInput(parameters, 'segments', {
+        min: 1,
+        max: 10,
+        step: 1
     });
 
     const display = pane.addFolder({
@@ -70,53 +87,50 @@ function createGui(parameters): Pane {
         max: 2
     });
 
+
+    const advanced = pane.addFolder({
+        title: 'advanced'
+    });
+
+    const info = pane.addFolder({
+       title: 'info',
+       expanded: false
+    });
+
+    const functions = {
+        'dx': '(a * (y - x))',
+        'dy': '(x * (b - z) - y)',
+        'dz': '(x * y - c * z)'
+    }
+
+    info.addMonitor(functions, 'dx');
+    info.addMonitor(functions, 'dy');
+    info.addMonitor(functions, 'dz');
+
+
     return pane;
 }
 
 const parameters = {
-    iterations: 1000,
+    playing: true,
+    iterations: 2500,
     a: 10,
     b: 28,
     c: 8.0 / 3.0,
     dt: 0.001,
+    segments: 3,
     color: new three.Color(0xffffff),
-    linewidth: 0.15
+    linewidth: 0.15,
 }
 
 const pane = createGui(parameters);
-pane.on('change', generateAttractor)
-generateAttractor();
-
-function generateAttractor() {
-    scene.clear();
-
-    const { a, b, c, dt, color, linewidth } = parameters;
-
-    let x = 0.01;
-    let y = 0;
-    let z = 0;
-    const points: three.Vector3[] = [];
-
-    for (let i = 0; i < parameters.iterations; i++) {
-        x += (a * (y - x)) * dt;
-        y += (x * (b - z) - y) * dt;
-        z += (x * y - c * z) * dt;
-        points.push(new three.Vector3(x, y, z));
-    }
-
-    const line = generateLine(points, color, linewidth);
-    scene.add(line);
-}
-
-const animatedPoints: three.Vector3[] = [];
-const animationLength = 100;
 
 function generateLine(points: three.Vector3[], color: three.Color = new three.Color(0xffffff), linewidth = 3.0): three.Mesh {
     const line = new MeshLine();
     line.setPoints(points);
     const material = new MeshLineMaterial({
         color,
-        lineWidth: linewidth
+        lineWidth: linewidth,
     });
     const mesh = new three.Mesh(line, material);
 
@@ -125,30 +139,34 @@ function generateLine(points: three.Vector3[], color: three.Color = new three.Co
 
 let lastTime = 0;
 
+const points: three.Vector3[] = [];
+let x = 0.01;
+let y = 0;
+let z = 0;
+
 const animate: FrameRequestCallback = (time) => {
     const delta = time - lastTime;
     lastTime = time;
     requestAnimationFrame(animate)
     render()
 
+    if (!parameters.playing) return;
+
     stats.begin();
     scene.clear();
 
-    const { a, b, c, dt, color, linewidth } = parameters;
+    const { iterations, a, b, c, dt, color, linewidth, segments } = parameters;
 
-    let x = 0.01;
-    let y = 0;
-    let z = 0;
-    const points: three.Vector3[] = [];
+    for (let i = 0; i < segments; i++) {
+        if (points.length >= iterations) {
+            points.shift();
+        }
 
-    if (points.length >= animationLength) {
-        points.shift();
+        x += (a * (y - x)) * dt * delta / segments;
+        y += (x * (b - z) - y) * dt * delta / segments;
+        z += (x * y - c * z) * dt * delta / segments;
+        points.push(new three.Vector3(x, y, z));
     }
-
-    x += (a * (y - x)) * dt * delta;
-    y += (x * (b - z) - y) * dt * delta;
-    z += (x * y - c * z) * dt * delta;
-    points.push(new three.Vector3(x, y, z));
 
     const line = generateLine(points, color, linewidth);
     scene.add(line);
@@ -161,4 +179,4 @@ function render() {
     renderer.render(scene, camera)
 }
 
-animate()
+animate(0)
