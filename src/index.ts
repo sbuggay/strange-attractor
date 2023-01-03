@@ -80,7 +80,13 @@ function createGui(parameters): Pane {
         color: {
             type: 'float'
         }
-    })
+    });
+
+    display.addInput(parameters, 'background', {
+        color: {
+            type: 'float'
+        }
+    });
 
     display.addInput(parameters, 'linewidth', {
         min: 0,
@@ -93,8 +99,8 @@ function createGui(parameters): Pane {
     });
 
     const info = pane.addFolder({
-       title: 'info',
-       expanded: false
+        title: 'info',
+        expanded: false
     });
 
     const functions = {
@@ -106,7 +112,6 @@ function createGui(parameters): Pane {
     info.addMonitor(functions, 'dx');
     info.addMonitor(functions, 'dy');
     info.addMonitor(functions, 'dz');
-
 
     return pane;
 }
@@ -120,6 +125,7 @@ const parameters = {
     dt: 0.001,
     segments: 3,
     color: new three.Color(0xffffff),
+    background: new three.Color(0x0),
     linewidth: 0.15,
 }
 
@@ -151,11 +157,13 @@ const animate: FrameRequestCallback = (time) => {
     render()
 
     if (!parameters.playing) return;
+    const { iterations, a, b, c, dt, color, background, linewidth, segments } = parameters;
 
     stats.begin();
+
+    scene.background = background;
     scene.clear();
 
-    const { iterations, a, b, c, dt, color, linewidth, segments } = parameters;
 
     for (let i = 0; i < segments; i++) {
         if (points.length >= iterations) {
