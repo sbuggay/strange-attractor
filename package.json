@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "parcel": "parcel src/index.html",
+    "build": "parcel build src/index.html --dist-dir docs/",
+    "start": "parcel src/index.html",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@tweakpane/plugin-essentials": "^0.1.8",
     "dat.gui": "^0.7.9",
     "three": "^0.148.0",
     "three.meshline": "^1.4.0",
