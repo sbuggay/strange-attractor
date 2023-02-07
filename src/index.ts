@@ -1,24 +1,26 @@
-import * as three from 'three';
+import { Mesh, SphereGeometry, MeshBasicMaterial, Scene, PerspectiveCamera, WebGLRenderer} from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { Pane } from 'tweakpane';
 import { MeshLine, MeshLineMaterial } from 'three.meshline';
 import { Color, Fog, Vector3 } from 'three';
 
 import ObjectPool from './ObjectPool';
 import { createGui } from './Gui';
 
-const scene = new three.Scene();
+
+const buffer: Vector3[] = [];
+const vectorPool = new ObjectPool<Vector3>(10_000, () => new Vector3());
+const scene = new Scene();
 scene.fog = new Fog(new Color(0x0), 0, 1000);
 
-const camera = new three.PerspectiveCamera(
+const camera = new PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
     0.1,
     1000
 );
-camera.position.z = 100;
+camera.position.z = 75;
 
-const renderer = new three.WebGLRenderer({
+const renderer = new WebGLRenderer({
     antialias: true
 });
 
@@ -43,30 +45,46 @@ const parameters = {
     c: 8.0 / 3.0,
     dt: 0.02,
     segments: 3,
-    color: new three.Color(0xffffff),
-    background: new three.Color(0x0),
+    color: new Color(0xffffff),
+    background: new Color(0x0),
     start: { x: 0, y: 0, z: 0 },
     linewidth: 0.2,
+    showFixedPoints: true,
     line: new MeshLine(),
 }
 
-const geometry = new three.SphereGeometry(0.5, 16, 16);
-const sphere = new three.Mesh(geometry, new three.MeshBasicMaterial({ color: 0x6289cc }));
+// Add fixed points
+const geometry = new SphereGeometry(0.5, 16, 16);
+const sphere = new Mesh(geometry, new MeshBasicMaterial({ color: 0x6289cc }));
 sphere.position.set(-Math.sqrt(parameters.b - 1) * Math.sqrt(parameters.c), -Math.sqrt(parameters.b - 1) * Math.sqrt(parameters.c), parameters.b - 1);
 scene.add(sphere);
 
-const sphere2 = new three.Mesh(geometry, new three.MeshBasicMaterial({ color: 0xbecc62 }));
+const sphere2 = new Mesh(geometry, new MeshBasicMaterial({ color: 0xbecc62 }));
 sphere2.position.set(Math.sqrt(parameters.b - 1) * Math.sqrt(parameters.c), Math.sqrt(parameters.b - 1) * Math.sqrt(parameters.c), parameters.b - 1);
 scene.add(sphere2);
 
-const [pane, fpsGraph] = createGui(parameters);
+const center = sphere2.position.clone().add(sphere.position).divideScalar(2);
+controls.target = center;
+
+const [pane, fpsGraph] = createGui(parameters, {
+    play: (button) => {
+        parameters.playing = !parameters.playing;
+        button.title = parameters.playing ? 'pause' : 'play';
+    },
+    reset: () => {
+        x = 0.1;
+        y = 0;
+        z = 0;
+        buffer.splice(0, buffer.length);
+    }
+});
 
 const material = new MeshLineMaterial({
     color: parameters.color,
     lineWidth: parameters.linewidth,
 });
 const line = new MeshLine();
-const mesh = new three.Mesh(line, material);
+const mesh = new Mesh(line, material);
 scene.add(mesh);
 
 pane.on('change', (e) => {
@@ -81,13 +99,12 @@ pane.on('change', (e) => {
     sphere2.position.set(Math.sqrt(parameters.b - 1) * Math.sqrt(parameters.c), Math.sqrt(parameters.b - 1) * Math.sqrt(parameters.c), parameters.b - 1);
 });
 
-function generateLine(points: three.Vector3[],): three.Mesh {
+function generateLine(points: Vector3[],): Mesh {
     line.setPoints(points);
     mesh.geometry = line;
     return mesh;
 }
 
-let lastTime = 0;
 let x = 0.01;
 let y = 0;
 let z = 0;
@@ -103,27 +120,30 @@ function onDocumentKeyDown(event: KeyboardEvent) {
     }
 };
 
-const buffer: three.Vector3[] = [];
-const vectorPool = new ObjectPool<three.Vector3>(10_000, () => new three.Vector3());
+controls.autoRotate = true;
+
+renderer.domElement.addEventListener('mousedown', () => {
+    controls.autoRotate = false;
+});
 
 const animate: FrameRequestCallback = (time) => {
-    // const delta = time - lastTime;
-    lastTime = time;
-    requestAnimationFrame(animate)
-    render()
+    controls.update();
 
+    sphere.visible = parameters.showFixedPoints;
+    sphere2.visible = parameters.showFixedPoints;
+    
     if (!parameters.playing) return;
-    const { iterations, a, b, c, dt, color, background, linewidth, segments } = parameters;
-
+    const { iterations, a, b, c, dt, background, segments } = parameters;
+    
     fpsGraph.begin();
-
+    
     scene.background = background;
-
+    
     for (let i = 0; i < segments; i++) {
         if (buffer.length >= iterations) {
             buffer.shift();
         }
-
+        
         x += (a * (y - x)) * dt / segments;
         y += (x * (b - z) - y) * dt / segments;
         z += (x * y - c * z) * dt / segments;
@@ -131,10 +151,12 @@ const animate: FrameRequestCallback = (time) => {
         v.set(x, y, z);
         buffer.push(v);
     }
-
-    const line = generateLine(buffer);
-
+    
+    generateLine(buffer);
+    render();
     fpsGraph.end();
+
+    requestAnimationFrame(animate);
 }
 
 function render() {

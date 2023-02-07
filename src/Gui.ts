@@ -1,7 +1,12 @@
-import { Pane } from "tweakpane";
+import { ButtonApi, Pane } from "tweakpane";
 import * as EssentialsPlugin from '@tweakpane/plugin-essentials';
 
-export function createGui(parameters): [Pane, EssentialsPlugin.FpsGraphBladeApi] {
+interface IHandlers {
+    play: (button: ButtonApi) => void;
+    reset: (button: ButtonApi) => void;
+}
+
+export function createGui(parameters, handlers: IHandlers): [Pane, EssentialsPlugin.FpsGraphBladeApi] {
     const pane = new Pane();
     const simulation = pane.addFolder({
         title: 'simulation'
@@ -10,10 +15,13 @@ export function createGui(parameters): [Pane, EssentialsPlugin.FpsGraphBladeApi]
         title: 'pause'
     });
 
-    playButton.on('click', () => {
-        parameters.playing = !parameters.playing;
-        playButton.title = parameters.playing ? 'pause' : 'play';
+    playButton.on('click', () => handlers['play'](playButton));
+
+    const resetButton = simulation.addButton({
+        title: 'reset'
     });
+
+    resetButton.on('click', () => handlers['reset'](resetButton));
 
     simulation.addInput(parameters, 'iterations', {
         min: 0,
@@ -63,10 +71,7 @@ export function createGui(parameters): [Pane, EssentialsPlugin.FpsGraphBladeApi]
         max: 2
     });
 
-    const advanced = pane.addFolder({
-        title: 'advanced',
-        expanded: false
-    });
+    display.addInput(parameters, 'showFixedPoints');
 
     const info = pane.addFolder({
         title: 'info'
