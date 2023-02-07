@@ -6,7 +6,6 @@ import { Color, Fog, Vector3 } from 'three';
 import ObjectPool from './ObjectPool';
 import { createGui } from './Gui';
 
-
 const buffer: Vector3[] = [];
 const vectorPool = new ObjectPool<Vector3>(10_000, () => new Vector3());
 const scene = new Scene();
@@ -132,6 +131,10 @@ const animate: FrameRequestCallback = (time) => {
     sphere.visible = parameters.showFixedPoints;
     sphere2.visible = parameters.showFixedPoints;
     
+
+    requestAnimationFrame(animate);
+    render();
+
     if (!parameters.playing) return;
     const { iterations, a, b, c, dt, background, segments } = parameters;
     
@@ -153,10 +156,8 @@ const animate: FrameRequestCallback = (time) => {
     }
     
     generateLine(buffer);
-    render();
+    
     fpsGraph.end();
-
-    requestAnimationFrame(animate);
 }
 
 function render() {
