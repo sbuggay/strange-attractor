@@ -14,7 +14,8 @@
     "dat.gui": "^0.7.9",
     "three": "^0.148.0",
     "three.meshline": "^1.4.0",
-    "tweakpane": "^3.1.1"
+    "tweakpane": "^3.1.1",
+    "tweakpane-plugin-infodump": "github:doersino/tweakpane-plugin-infodump"
   },
   "devDependencies": {
     "@tweakpane/core": "^1.1.1",

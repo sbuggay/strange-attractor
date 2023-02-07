@@ -1,5 +1,6 @@
 import { ButtonApi, Pane } from "tweakpane";
 import * as EssentialsPlugin from '@tweakpane/plugin-essentials';
+import * as InfodumpPlugin from 'tweakpane-plugin-infodump';
 
 interface IHandlers {
     play: (button: ButtonApi) => void;
@@ -87,7 +88,15 @@ export function createGui(parameters, handlers: IHandlers): [Pane, EssentialsPlu
     info.addMonitor(functions, 'dy');
     info.addMonitor(functions, 'dz');
 
+    // info.addBlade({
+    //     view: "infodump",
+    //     content: "Major, lark's true pepper. Let birds go further loose maybe. Shout easy play.",
+    //     border: false,
+    //     markdown: true,
+    // });
+
     pane.registerPlugin(EssentialsPlugin);
+    pane.registerPlugin(InfodumpPlugin);
 
     const fpsGraph = info.addBlade({
         view: 'fpsgraph',
